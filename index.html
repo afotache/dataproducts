@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DataProducts App</title>
+  <meta charset="utf-8">
+  <meta name="description" content="DataProducts App">
+  <meta name="author" content="Alina Fotache">
+  <meta name="generator" content="slidify" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/default.css" media="all" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/phone.css" 
+    media="only screen and (max-device-width: 480px)" >
+  <link rel="stylesheet" href="libraries/frameworks/io2012/css/slidify.css" >
+  <link rel="stylesheet" href="libraries/highlighters/highlight.js/css/tomorrow.css" />
+  <base target="_blank"> <!-- This amazingness opens all links in a new tab. -->  <link rel=stylesheet href="./assets/css/ribbons.css"></link>
+
+  
+  <!-- Grab CDN jQuery, fall back to local if offline -->
+  <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+  <script>window.jQuery || document.write('<script src="libraries/widgets/quiz/js/jquery.js"><\/script>')</script> 
+  <script data-main="libraries/frameworks/io2012/js/slides" 
+    src="libraries/frameworks/io2012/js/require-1.0.8.min.js">
+  </script>
+  
+  
+
+</head>
+<body style="opacity: 0">
+  <slides class="layout-widescreen">
+    
+    <!-- LOGO SLIDE -->
+        <slide class="title-slide segue nobackground">
+  <hgroup class="auto-fadein">
+    <h1>DataProducts App</h1>
+    <h2>impact of weight, cylinders and hp on fuel efficiency</h2>
+    <p>Alina Fotache<br/></p>
+  </hgroup>
+  <article></article>  
+</slide>
+    
+
+    <!-- SLIDES -->
+    <slide class="" id="slide-1" style="background:;">
+  <hgroup>
+    <h2>Introduction</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>We were asked before the following question - &quot;Are car features like cylinders and horse power driving a car&#39;s MPG?&quot; The DataProducts App has created a prediction model to predict the mpg. The app runs on the data set <code>mtcars</code>, which is available with the &#39;datasets&#39; library.  </p>
+
+<p>Using the following features, I created a prediction algorithm to predict the MPG (miles per gallon) for a vehicle:</p>
+
+<ul>
+<li><code>wt</code> : weight of the vehicle</li>
+<li><code>cyl</code> : number of engine cylinders and </li>
+<li><code>hp</code> : horse power of the engine. </li>
+</ul>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="id" style="background:;">
+  <hgroup>
+    <h2>How does the application work?</h2>
+  </hgroup>
+  <article data-timings="">
+    <p>The shinyUI displays a set of input slider selections for the 3 predictors mentioned in earlier slide. Based on the user selection of the predictors, the UI sends the information to server.r to predict the MPG outcome and to render 2 plots - a histogram of the <code>mpg</code> plot along with the predicted value <code>mu</code> and the <code>MSE</code> (mean squared error).</p>
+
+<p>The following boxplot graph shows the MPG values range for the cylynder types. </p>
+
+<pre><code class="r">data(mtcars)
+boxplot(mpg ~ cyl, xlab=&quot;Cylinders&quot;, ylab=&quot;MPG&quot;, data = mtcars,
+              col = (c(&quot;red&quot;, &quot;blue&quot;)), main=&quot;MPG versus cylinders&quot;)
+</code></pre>
+
+<p><img src="figure/plotChunk-1.png" alt="plot of chunk plotChunk"></p>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="id" style="background:;">
+  <hgroup>
+    <h2>User interface</h2>
+  </hgroup>
+  <article data-timings="">
+    <p><code>ui.r</code></p>
+
+<pre><code>library(shiny)
+shinyUI(
+  pageWithSidebar(
+    headerPanel(&quot;Predicting mpg on mtcars dataset&quot;),
+    sidebarPanel(
+      p(&quot;This application will predict the impact of number of cylinders, weight horse power on a vehicle&#39;s fuel efficiency, and we show the result in miles per gallon.&quot;),
+      p(&quot;Please use the sliders to obtain a predicted mpg and &#39;mu&#39; on the graph to the right.&quot;),
+      p(&quot;You will observe that changing the parameters below will result in an increase or decrease of miles per gallon. The overall change in mpg depends on the selections of the 3 predictors.&quot;),
+      sliderInput(&#39;wt&#39;, &#39;Guess the weight&#39;,value = 1, min = 1, max = 5.5, step = 0.5,),
+      sliderInput(&#39;hp&#39;, &#39;Guess the horsepower&#39;,value = 10, min = 50, max = 300, step = 50,),
+      numericInput(&#39;cyl&#39;, &#39;Guess the cylinders&#39;, 2, min=2, max=8, step=2)
+    ),
+    mainPanel(
+      h3(&quot;Results of prediction model&quot;),
+      plotOutput(&#39;weightHistogram&#39;),
+      plotOutput(&#39;boxPlotcyl&#39;)
+    )
+  )
+)
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+<slide class="class" id="id" style="background:;">
+  <hgroup>
+    <h2>Server side</h2>
+  </hgroup>
+  <article data-timings="">
+    <p><code>server.r</code></p>
+
+<pre><code>library(shiny)
+library(ggplot2)
+library(caret)
+library(datasets)
+data(mtcars)
+train &lt;- train(mpg ~ cyl+wt+hp, data=mtcars, method=&quot;lm&quot;)
+mpgPred &lt;- function(mtcarsdata) {
+  predict(train,newdata=mtcarsdata)
+}
+shinyServer(
+  function(input, output) {
+    output$weightHistogram &lt;- renderPlot({
+      hist(mtcars$mpg, xlab=&#39;MPG (Miles per gallon)&#39;, col=&#39;orange&#39;, main=&#39;Histogram&#39;)
+      mtcarsdata &lt;- data.frame(wt = input$wt, hp = input$hp, cyl = input$cyl)
+      mu &lt;- mpgPred (mtcarsdata)
+      lines(c(mu, mu), c(0, 20),col=&quot;black&quot;,lwd=5)
+      mse &lt;- mean((mtcars$mpg - mu)^2)
+      text(11, 12, paste(&quot;mu = &quot;, round(mu, 2)))
+      text(11, 10, paste(&quot;MSE = &quot;, round(mse, 2)))
+    })
+    output$boxPlotcyl &lt;- renderPlot({
+      boxplot(mpg ~ cyl, xlab=&quot;Cylinders&quot;, ylab=&quot;MPG&quot;, data = mtcars,
+              col = (c(&quot;red&quot;, &quot;blue&quot;)), main=&quot;MPG versus cylinders&quot;)
+    })
+  }    
+)  
+</code></pre>
+
+  </article>
+  <!-- Presenter Notes -->
+</slide>
+
+    <slide class="backdrop"></slide>
+  </slides>
+  <div class="pagination pagination-small" id='io2012-ptoc' style="display:none;">
+    <ul>
+      <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=1 title='Introduction'>
+         1
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=2 title='How does the application work?'>
+         2
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=3 title='User interface'>
+         3
+      </a>
+    </li>
+    <li>
+      <a href="#" target="_self" rel='tooltip' 
+        data-slide=4 title='Server side'>
+         4
+      </a>
+    </li>
+  </ul>
+  </div>  <!--[if IE]>
+    <script 
+      src="http://ajax.googleapis.com/ajax/libs/chrome-frame/1/CFInstall.min.js">  
+    </script>
+    <script>CFInstall.check({mode: 'overlay'});</script>
+  <![endif]-->
+</body>
+  <!-- Load Javascripts for Widgets -->
+  
+  <!-- LOAD HIGHLIGHTER JS FILES -->
+  <script src="libraries/highlighters/highlight.js/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <!-- DONE LOADING HIGHLIGHTER JS FILES -->
+   
+  </html>

@@ -1,0 +1,98 @@
+---
+title       : DataProducts App
+subtitle    : impact of weight, cylinders and hp on fuel efficiency
+author      : Alina Fotache
+job         : 
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+---
+
+## Introduction
+
+We were asked before the following question - "Are car features like cylinders and horse power driving a car's MPG?" The DataProducts App has created a prediction model to predict the mpg. The app runs on the data set `mtcars`, which is available with the 'datasets' library.  
+
+Using the following features, I created a prediction algorithm to predict the MPG (miles per gallon) for a vehicle:
+- `wt` : weight of the vehicle
+- `cyl` : number of engine cylinders and 
+- `hp` : horse power of the engine. 
+
+--- .class #id 
+
+## How does the application work?
+
+The shinyUI displays a set of input slider selections for the 3 predictors mentioned in earlier slide. Based on the user selection of the predictors, the UI sends the information to server.r to predict the MPG outcome and to render 2 plots - a histogram of the `mpg` plot along with the predicted value `mu` and the `MSE` (mean squared error).
+
+The following boxplot graph shows the MPG values range for the cylynder types. 
+```{r plotChunk, message=FALSE, fig.height=3, fig.width=3}
+data(mtcars)
+boxplot(mpg ~ cyl, xlab="Cylinders", ylab="MPG", data = mtcars,
+              col = (c("red", "blue")), main="MPG versus cylinders")
+```
+
+--- .class #id 
+
+## User interface
+`ui.r`
+
+```
+library(shiny)
+shinyUI(
+  pageWithSidebar(
+    headerPanel("Predicting mpg on mtcars dataset"),
+    sidebarPanel(
+      p("This application will predict the impact of number of cylinders, weight horse power on a vehicle's fuel efficiency, and we show the result in miles per gallon."),
+      p("Please use the sliders to obtain a predicted mpg and 'mu' on the graph to the right."),
+      p("You will observe that changing the parameters below will result in an increase or decrease of miles per gallon. The overall change in mpg depends on the selections of the 3 predictors."),
+      sliderInput('wt', 'Guess the weight',value = 1, min = 1, max = 5.5, step = 0.5,),
+      sliderInput('hp', 'Guess the horsepower',value = 10, min = 50, max = 300, step = 50,),
+      numericInput('cyl', 'Guess the cylinders', 2, min=2, max=8, step=2)
+    ),
+    mainPanel(
+      h3("Results of prediction model"),
+      plotOutput('weightHistogram'),
+      plotOutput('boxPlotcyl')
+    )
+  )
+)
+```  
+
+--- .class #id 
+
+## Server side
+`server.r`
+```  
+library(shiny)
+library(ggplot2)
+library(caret)
+library(datasets)
+data(mtcars)
+train <- train(mpg ~ cyl+wt+hp, data=mtcars, method="lm")
+mpgPred <- function(mtcarsdata) {
+  predict(train,newdata=mtcarsdata)
+}
+shinyServer(
+  function(input, output) {
+    output$weightHistogram <- renderPlot({
+      hist(mtcars$mpg, xlab='MPG (Miles per gallon)', col='orange', main='Histogram')
+      mtcarsdata <- data.frame(wt = input$wt, hp = input$hp, cyl = input$cyl)
+      mu <- mpgPred (mtcarsdata)
+      lines(c(mu, mu), c(0, 20),col="black",lwd=5)
+      mse <- mean((mtcars$mpg - mu)^2)
+      text(11, 12, paste("mu = ", round(mu, 2)))
+      text(11, 10, paste("MSE = ", round(mse, 2)))
+    })
+    output$boxPlotcyl <- renderPlot({
+      boxplot(mpg ~ cyl, xlab="Cylinders", ylab="MPG", data = mtcars,
+              col = (c("red", "blue")), main="MPG versus cylinders")
+    })
+  }    
+)  
+```
+
+
+
+
